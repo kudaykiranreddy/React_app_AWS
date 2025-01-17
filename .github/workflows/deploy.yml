@@ -61,7 +61,7 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.TOKEN }}
 
-      # Step 8: Deploy to Netlify (Only for prod branch)
+      # Step 8: Deploy to Netlify (Only for prod branches)
       - name: Deploy to Netlify
         if: github.ref == 'refs/heads/prod'
         uses: nwtgck/actions-netlify@v3
