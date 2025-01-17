@@ -1,4 +1,4 @@
-name: Multi-Environment Deployment
+name: Multi-Environment Deployment with Auto-Merge to Prod
 
 on:
   push:
@@ -62,9 +62,44 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_TEST_SITE_ID }}
           HOMEPAGE_URL: ${{ secrets.HOMEPAGE_URL }}  # Use the test homepage URL from secrets
 
-      # Step 8: Deploy to Netlify (Prod branch, after PR merge)
+  auto-merge-to-prod:
+    name: Auto-Merge to Prod
+    runs-on: ubuntu-latest
+    needs: build-and-deploy
+    if: success() && github.ref == 'refs/heads/test'  # Trigger auto-merge only after test branch success
+
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Configure Git User
+      - name: Configure Git User
+        run: |
+          git config --global user.name "kudaykiranreddy"
+          git config --global user.email "kudaykiranreddy143@gmail.com"
+
+      # Step 3: Merge Test into Prod with Automatic Conflict Resolution
+      - name: Merge Test into Prod
+        run: |
+          git fetch origin
+          git checkout prod
+          git merge test --strategy-option theirs --allow-unrelated-histories --no-edit
+          git push origin prod
+
+  deploy-to-netlify-prod:
+    name: Deploy to Netlify (Prod)
+    runs-on: ubuntu-latest
+    needs: auto-merge-to-prod
+    if: success()  # Deploy only after auto-merge to prod succeeds
+
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Deploy to Netlify (Prod)
       - name: Deploy to Netlify (Prod)
-        if: github.event.pull_request.merged == true && github.base_ref == 'prod'  # Deploy only after PR is merged into prod
         uses: nwtgck/actions-netlify@v3
         with:
           publish-dir: To_do_app/dist
