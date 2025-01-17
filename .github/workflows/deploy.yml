@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - test
+  pull_request:
+    branches:
+      - prod
   workflow_dispatch:
 
 permissions:
@@ -47,27 +50,24 @@ jobs:
       - name: List dist directory
         run: ls -alh To_do_app/dist || echo "Dist directory not found"
 
-      # Step 7: Merge changes from test to prod (triggered after tests pass in test branches)
-      - name: Merge changes from test to prod
-        if: github.ref_name == 'test' && success()  # Merge only if the tests are successful
-        run: |
-            git config --global user.name "GitHub Actions"
-            git config --global user.email "actions@github.com"
-            git fetch origin
-            git checkout prod
-            git pull origin prod  # Ensure prod is up to date
-            git merge test --no-edit --allow-unrelated-histories
-            git push origin prod
-        env:
-            GITHUB_TOKEN: ${{ secrets.TOKEN }}
-
-      # Step 8: Deploy to Netlify (Only for test branch now)
-      - name: Deploy to Netlify
-        if: github.ref == 'refs/heads/test'  # Deploy on test branch instead of prod
+      # Step 7: Deploy to Netlify (Only for test branch)
+      - name: Deploy to Netlify (Test)
+        if: github.ref == 'refs/heads/test'  # Deploy on test branch
         uses: nwtgck/actions-netlify@v3
         with:
           publish-dir: To_do_app/dist
-          production-deploy: true
+          production-deploy: false  # Ensure this deploy is not to production
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PROD_SITE_ID }}
+
+      # Step 8: Deploy to Netlify (Only for merged PR into prod branch)
+      - name: Deploy to Netlify (Prod)
+        if: github.event.pull_request.merged == true && github.base_ref == 'prod'  # Deploy only after PR is merged into prod
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: To_do_app/dist
+          production-deploy: true  # This deploys to production
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_TEST_SITE_ID }}
