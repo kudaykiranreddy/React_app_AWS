@@ -61,9 +61,9 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.TOKEN }}
 
-      # Step 8: Deploy to Netlify (Only for prod branches)
+      # Step 8: Deploy to Netlify (Only for test branch now)
       - name: Deploy to Netlify
-        if: github.ref == 'refs/heads/prod'
+        if: github.ref == 'refs/heads/test'  # Deploy on test branch instead of prod
         uses: nwtgck/actions-netlify@v3
         with:
           publish-dir: To_do_app/dist
