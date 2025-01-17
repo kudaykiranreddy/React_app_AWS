@@ -50,7 +50,7 @@ jobs:
       - name: List dist directory
         run: ls -alh To_do_app/dist || echo "Dist directory not found"
 
-      # Step 7: Deploy to Netlify (Only for test branch)
+      # Step 7: Deploy to Netlify (Test branch)
       - name: Deploy to Netlify (Test)
         if: github.ref == 'refs/heads/test'  # Deploy on test branch
         uses: nwtgck/actions-netlify@v3
@@ -59,9 +59,10 @@ jobs:
           production-deploy: false  # Ensure this deploy is not to production
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PROD_SITE_ID }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_TEST_SITE_ID }}
+          HOMEPAGE_URL: ${{ secrets.HOMEPAGE_URL }}  # Use the test homepage URL from secrets
 
-      # Step 8: Deploy to Netlify (Only for merged PR into prod branch)
+      # Step 8: Deploy to Netlify (Prod branch, after PR merge)
       - name: Deploy to Netlify (Prod)
         if: github.event.pull_request.merged == true && github.base_ref == 'prod'  # Deploy only after PR is merged into prod
         uses: nwtgck/actions-netlify@v3
@@ -70,4 +71,5 @@ jobs:
           production-deploy: true  # This deploys to production
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_TEST_SITE_ID }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PROD_SITE_ID }}
+          HOMEPAGE_URL: ${{ secrets.PROD_HOMEPAGE_URL }}  # Use the prod homepage URL from secrets
