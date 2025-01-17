@@ -55,7 +55,7 @@ jobs:
             This pull request merges changes from `test` into `prod`.
           draft: false
 
-      # Step 7: Deploy to Netlify (Only for prod branch)
+      # Step 7: Deploy to Netlify (Only for prod branches)
       - name: Deploy to Netlify
         if: github.ref == 'refs/heads/prod'
         uses: nwtgck/actions-netlify@v3
