@@ -3,7 +3,7 @@
     "private": true,
     "version": "0.0.0",
     "homepage": "https://stupendous-snickerdoodle-61c3d0.netlify.app/",
-    "prodHomepage": "https://boisterous-mochi-ffa7e3.netlify.app/"
+    "prodHomepage": "https://boisterous-mochi-ffa7e3.netlify.app/",
     "scripts": {
       "dev": "vite",
       "build": "vite build",
