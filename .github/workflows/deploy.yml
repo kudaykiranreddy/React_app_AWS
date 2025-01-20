@@ -35,7 +35,7 @@ jobs:
         run: npm ci
         working-directory: To_do_app
 
-      # Step 4: Run tests (only for test branch)
+      # Step 4: Run tests (only for the test branch)
       - name: Run tests
         if: github.ref_name == 'test'
         run: npm test
@@ -46,13 +46,16 @@ jobs:
         run: npm run build --verbose
         working-directory: To_do_app
 
-      # Step 6: List dist directory for debugging
-      - name: List dist directory
-        run: ls -alh To_do_app/dist || echo "Dist directory not found"
+      # Step 6: Upload build artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-dist
+          path: To_do_app/dist
 
       # Step 7: Deploy to Netlify (Test branch)
       - name: Deploy to Netlify (Test)
-        if: github.ref == 'refs/heads/test'  # Deploy on test branch
+        if: github.ref == 'refs/heads/test'  # Deploy only for test branch
         uses: nwtgck/actions-netlify@v3
         with:
           publish-dir: To_do_app/dist
@@ -60,7 +63,7 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_TEST_SITE_ID }}
-          HOMEPAGE_URL: ${{ secrets.HOMEPAGE_URL }}  # Use the test homepage URL from secrets
+          HOMEPAGE_URL: ${{ secrets.HOMEPAGE_URL }}  # Test homepage URL from secrets
 
   auto-merge-to-prod:
     name: Auto-Merge to Prod
@@ -98,7 +101,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Deploy to Netlify (Prod)
+      # Step 2: Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-dist
+          path: To_do_app/dist
+
+      # Step 3: Deploy to Netlify (Prod)
       - name: Deploy to Netlify (Prod)
         uses: nwtgck/actions-netlify@v3
         with:
@@ -107,4 +117,4 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PROD_SITE_ID }}
-          HOMEPAGE_URL: ${{ secrets.PROD_HOMEPAGE_URL }}  # Use the prod homepage URL from secrets
+          HOMEPAGE_URL: ${{ secrets.PROD_HOMEPAGE_URL }}
