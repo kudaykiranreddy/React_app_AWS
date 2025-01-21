@@ -1,13 +1,14 @@
-name: Test Deployment
+name: Multi-Environment Deployment with Test Deploy
 
 on:
   push:
     branches:
       - test
+  workflow_dispatch:
 
 permissions:
   contents: write
-  pull-requests: write
+  id-token: write
 
 jobs:
   build-and-deploy:
@@ -31,32 +32,32 @@ jobs:
         run: npm ci
         working-directory: To_do_app
 
-      # Step 4: Build the app
+      # Step 4: Run tests (only for the test branch)
+      - name: Run tests
+        if: github.ref_name == 'test'
+        run: npm test
+        working-directory: To_do_app
+
+      # Step 5: Build the app
       - name: Build the app
         run: npm run build --verbose
         working-directory: To_do_app
 
-      # Step 5: Deploy to Netlify (Test environment)
+      # Step 6: Upload build artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-dist
+          path: To_do_app/dist
+
+      # Step 7: Deploy to Netlify (Test branch)
       - name: Deploy to Netlify (Test)
+        if: github.ref == 'refs/heads/test'  # Deploy only for test branch
         uses: nwtgck/actions-netlify@v3
         with:
           publish-dir: To_do_app/dist
-          production-deploy: false
+          production-deploy: false  # Ensure this deploy is not to production
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_TEST_SITE_ID }}
-          HOMEPAGE_URL: ${{ secrets.HOMEPAGE_URL }}
-
-
-      # Step 7: Create Pull Request
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          branch: test
-          title: "Merge changes from Test to Prod"
-          body: |
-            Changes from the test branch are ready to be merged into the prod branch.
-          base: prod
-          delete-branch: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Ensure the token has the right permissions
+          HOMEPAGE_URL: ${{ secrets.HOMEPAGE_URL }}  # Test homepage URL from secrets
