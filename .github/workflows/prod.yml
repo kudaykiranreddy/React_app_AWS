@@ -1,0 +1,42 @@
+name: Deploy to Netlify (Prod)
+
+on:
+  pull_request:
+    branches:
+      - prod
+  push:
+    branches:
+      - prod
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  deploy-to-netlify-prod:
+    name: Deploy to Netlify (Prod)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Download build artifacts
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-dist
+          path: To_do_app/dist
+
+      # Step 3: Deploy to Netlify (Prod)
+      - name: Deploy to Netlify (Prod)
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: To_do_app/dist
+          production-deploy: true  # This deploys to production
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PROD_SITE_ID }}
+          HOMEPAGE_URL: ${{ secrets.PROD_HOMEPAGE_URL }}
