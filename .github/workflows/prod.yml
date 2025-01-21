@@ -14,8 +14,8 @@ permissions:
   id-token: write
 
 jobs:
-  deploy-to-netlify-prod:
-    name: Deploy to Netlify (Prod)
+  build-and-deploy-prod:
+    name: Build and Deploy to Netlify (Prod)
     runs-on: ubuntu-latest
 
     steps:
@@ -23,14 +23,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Download build artifacts
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          name: build-dist
-          path: To_do_app/dist
+          node-version: 20
+          cache: npm
+          cache-dependency-path: To_do_app/package-lock.json
 
-      # Step 3: Deploy to Netlify (Prod)
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm ci
+        working-directory: To_do_app
+
+      # Step 4: Build the app
+      - name: Build the app
+        run: npm run build --verbose
+        working-directory: To_do_app
+
+      # Step 5: Deploy to Netlify (Prod)
       - name: Deploy to Netlify (Prod)
         uses: nwtgck/actions-netlify@v3
         with:
