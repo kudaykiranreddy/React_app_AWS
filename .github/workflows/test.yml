@@ -47,16 +47,6 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_TEST_SITE_ID }}
           HOMEPAGE_URL: ${{ secrets.HOMEPAGE_URL }}
 
-      # Step 6: Commit and push changes (if any)
-      - name: Commit and push changes
-        run: |
-          git config --global user.name "kudaykiranreddy"
-          git config --global user.email "kudaykiranreddy143@gmail.com"
-          git add .
-          git commit -m "Automated commit after deployment"
-          git push origin test
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Ensure the token has the right permissions
 
       # Step 7: Create Pull Request
       - name: Create Pull Request
