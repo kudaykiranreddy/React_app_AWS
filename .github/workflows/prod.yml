@@ -1,0 +1,44 @@
+name: Production Deployment
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-to-prod:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Deploy to Netlify (Prod)
+      - name: Deploy to Netlify (Prod)
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: To_do_app/dist
+          production-deploy: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PROD_SITE_ID }}
+          HOMEPAGE_URL: ${{ secrets.PROD_HOMEPAGE_URL }}
+
+      # Step 3: Send Email Notification
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Production Deployment Completed"
+          to: kukreddy5085@gmail.com
+          body: |
+            The changes from the `test` branch have been successfully merged into `prod` and deployed to production.
+          from: ukalicheti@anergroup.com
