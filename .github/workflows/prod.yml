@@ -65,8 +65,8 @@ jobs:
         with:
           server_address: smtp.gmail.com
           server_port: 587
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "Code Deployed to Prod Environment"
           body: "The latest code has been successfully deployed to the production environment. Visit the site at ${{ secrets.PROD_HOMEPAGE_URL }}."
           to: "ukalicheti@anergroup.com"
