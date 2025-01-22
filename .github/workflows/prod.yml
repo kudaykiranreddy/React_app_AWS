@@ -1,10 +1,10 @@
-name: Deploy to Netlify (Prod)
+name: Prod Deployment with Notifications
 
 on:
-  pull_request:
+  push:
     branches:
       - prod
-  push:
+  pull_request:
     branches:
       - prod
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
     steps:
       # Step 1: Checkout Code
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Step 2: Set up Node.js
       - name: Set up Node.js
@@ -41,13 +41,33 @@ jobs:
         run: npm run build --verbose
         working-directory: To_do_app
 
-      # Step 5: Deploy to Netlify (Prod)
+      # Step 5: Upload build artifacts for debugging
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-dist
+          path: To_do_app/dist
+
+      # Step 6: Deploy to Netlify (Prod)
       - name: Deploy to Netlify (Prod)
         uses: nwtgck/actions-netlify@v3
         with:
           publish-dir: To_do_app/dist
-          production-deploy: true  # This deploys to production
+          production-deploy: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PROD_SITE_ID }}
           HOMEPAGE_URL: ${{ secrets.PROD_HOMEPAGE_URL }}
+
+      # Step 7: Send email for prod deployment
+      - name: Send email for prod deploy
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "Code Deployed to Prod Environment"
+          body: "The latest code has been successfully deployed to the production environment. Visit the site at ${{ secrets.PROD_HOMEPAGE_URL }}."
+          to: "ukalicheti@anergroup.com"
+          from: "kudaykiranreddy143@gmail.com"
