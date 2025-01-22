@@ -3,10 +3,7 @@ name: Prod Deployment with Notifications
 on:
   push:
     branches:
-      - prod
-  pull_request:
-    branches:
-      - prod
+      - prod  # Trigger only on merges to prod
   workflow_dispatch:
 
 permissions:
