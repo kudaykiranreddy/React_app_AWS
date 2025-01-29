@@ -9,7 +9,7 @@ pipeline {
         GITHUB_PAT = credentials('github-pat')
         NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to where Node.js is installed
         NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to where npm binaries are installed
-        PATH = "${NODE_HOME}\\bin;${NPM_BIN};${env.PATH}"  // Add both Node.js and npm to the PATH
+        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add both Node.js and npm to the PATH
     }
 
     stages {
@@ -24,7 +24,7 @@ pipeline {
             steps {
                 echo "Setting up Node.js environment..."
                 script {
-                    // Optionally print Node.js and npm versions to verify
+                    // Verify Node and npm versions
                     bat 'node -v'
                     bat 'npm -v'
                 }
