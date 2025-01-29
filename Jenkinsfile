@@ -67,6 +67,17 @@ pipeline {
             }
         }
 
+        stage('Debug Branch Name') {
+            steps {
+                script {
+                    // Get the current branch name and set the environment variable manually
+                    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Current branch is: ${branchName}"
+                    env.BRANCH_NAME = branchName
+                }
+            }
+        }
+
         stage('Deploy to Netlify (Test)') {
             when {
                 expression { env.BRANCH_NAME == 'test' }
