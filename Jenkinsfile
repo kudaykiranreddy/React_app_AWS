@@ -7,6 +7,9 @@ pipeline {
         EMAIL_USERNAME = credentials('email-username')
         EMAIL_PASSWORD = credentials('email-password')
         GITHUB_PAT = credentials('github-pat')
+        NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to where Node.js is installed
+        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to where npm binaries are installed
+        PATH = "${NODE_HOME}\\bin;${NPM_BIN};${env.PATH}"  // Add both Node.js and npm to the PATH
     }
 
     stages {
@@ -20,7 +23,11 @@ pipeline {
         stage('Set Up Node.js') {
             steps {
                 echo "Setting up Node.js environment..."
-                tool name: 'NodeJS', type: 'NodeJSInstallation'
+                script {
+                    // Optionally print Node.js and npm versions to verify
+                    bat 'node -v'
+                    bat 'npm -v'
+                }
             }
         }
 
@@ -28,7 +35,7 @@ pipeline {
             steps {
                 echo "Installing dependencies..."
                 dir('To_do_app') {
-                    sh 'npm ci'
+                    bat 'npm ci'
                 }
             }
         }
@@ -37,7 +44,7 @@ pipeline {
             steps {
                 echo "Running tests..."
                 dir('To_do_app') {
-                    sh 'npm test'
+                    bat 'npm test'
                 }
             }
         }
@@ -46,7 +53,7 @@ pipeline {
             steps {
                 echo "Building the application..."
                 dir('To_do_app') {
-                    sh 'npm run build --verbose'
+                    bat 'npm run build --verbose'
                 }
             }
         }
@@ -55,7 +62,7 @@ pipeline {
             steps {
                 echo "Listing build directory..."
                 dir('To_do_app') {
-                    sh 'ls -alh dist || echo "Build directory not found"'
+                    bat 'dir dist || echo "Build directory not found"'
                 }
             }
         }
@@ -66,11 +73,11 @@ pipeline {
             }
             steps {
                 echo "Deploying to Netlify (Test)..."
-                sh '''
-                npx netlify deploy \
-                    --auth $NETLIFY_AUTH_TOKEN \
-                    --site $NETLIFY_TEST_SITE_ID \
-                    --dir To_do_app/dist \
+                bat '''
+                npx netlify deploy ^
+                    --auth $NETLIFY_AUTH_TOKEN ^
+                    --site $NETLIFY_TEST_SITE_ID ^
+                    --dir To_do_app\\dist ^
                     --message "Test deployment"
                 '''
             }
@@ -82,7 +89,7 @@ pipeline {
             }
             steps {
                 echo "Creating pull request from test to prod..."
-                sh '''
+                bat '''
                 echo "${GITHUB_PAT}" | gh auth login --with-token
                 gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
                 '''
