@@ -20,7 +20,7 @@ pipeline {
         stage('Set Up Node.js') {
             steps {
                 echo "Setting up Node.js environment..."
-                tool name: 'NodeJS-20', type: 'NodeJSInstallation'
+                tool name: 'NodeJS', type: 'NodeJSInstallation'
             }
         }
 
