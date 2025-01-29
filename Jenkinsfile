@@ -71,7 +71,7 @@ pipeline {
             steps {
                 script {
                     // Get the current branch name and set the environment variable manually
-                    def branchName = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
                     echo "Current branch is: ${branchName}"
                     env.BRANCH_NAME = branchName
                 }
