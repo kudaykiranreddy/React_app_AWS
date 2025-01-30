@@ -7,9 +7,9 @@ pipeline {
         EMAIL_USERNAME = credentials('email-username')
         EMAIL_PASSWORD = credentials('email-password')
         GITHUB_PAT = credentials('github-pat')
-        NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to where Node.js is installed
-        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to where npm binaries are installed
-        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add both Node.js and npm to the PATH
+        NODE_HOME = 'C:\\Program Files\\nodejs'
+        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'
+        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"
     }
 
     stages {
@@ -20,11 +20,28 @@ pipeline {
             }
         }
 
+        stage('Debug Branch Name') {
+            steps {
+                script {
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Branch detected: ${branchName}"
+                    
+                    // Ensure the branch name is set correctly
+                    if (!branchName?.trim()) {
+                        echo "Branch name detection failed! Setting manually to 'test'"
+                        branchName = 'test'
+                    }
+                    
+                    env.BRANCH_NAME = branchName
+                    echo "Jenkins env.BRANCH_NAME: ${env.BRANCH_NAME}"
+                }
+            }
+        }
+
         stage('Set Up Node.js') {
             steps {
                 echo "Setting up Node.js environment..."
                 script {
-                    // Verify Node and npm versions
                     bat 'node -v'
                     bat 'npm -v'
                 }
@@ -63,17 +80,6 @@ pipeline {
                 echo "Listing build directory..."
                 dir('To_do_app') {
                     bat 'dir dist || echo "Build directory not found"'
-                }
-            }
-        }
-
-        stage('Debug Branch Name') {
-            steps {
-                script {
-                    // Get the current branch name and set the environment variable manually
-                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    echo "Current branch is: ${branchName}"
-                    env.BRANCH_NAME = branchName
                 }
             }
         }
