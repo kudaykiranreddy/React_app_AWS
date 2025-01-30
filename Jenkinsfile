@@ -21,8 +21,8 @@ pipeline {
                         $class: 'GitSCM',
                         branches: [[name: '*/test']],  // Ensures 'test' branch is checked out
                         userRemoteConfigs: [[
-                            url: 'https://github.com/your-repository-url.git',
-                            credentialsId: 'your-github-credentials'
+                            url: 'https://github.com/kudaykiranreddy/React_app_AWS.git',
+                            credentialsId: 'github-pat'
                         ]]
                     ])
                 }
