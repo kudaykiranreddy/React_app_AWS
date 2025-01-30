@@ -16,22 +16,30 @@ pipeline {
         stage('Checkout Repository') {
             steps {
                 echo "Checking out repository..."
-                checkout scm
+                script {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/test']],  // Ensures 'test' branch is checked out
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/your-repository-url.git',
+                            credentialsId: 'your-github-credentials'
+                        ]]
+                    ])
+                }
             }
         }
 
         stage('Debug Branch Name') {
             steps {
                 script {
-                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    def branchName = bat(script: 'git symbolic-ref --short HEAD || git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
                     echo "Branch detected: ${branchName}"
                     
-                    // Ensure the branch name is set correctly
-                    if (!branchName?.trim()) {
+                    if (!branchName?.trim() || branchName == 'HEAD') {
                         echo "Branch name detection failed! Setting manually to 'test'"
                         branchName = 'test'
                     }
-                    
+
                     env.BRANCH_NAME = branchName
                     echo "Jenkins env.BRANCH_NAME: ${env.BRANCH_NAME}"
                 }
