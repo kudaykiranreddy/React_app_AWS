@@ -6,7 +6,7 @@ pipeline {
         NETLIFY_TEST_SITE_ID = credentials('netlify-test-site-id')
         EMAIL_USERNAME = credentials('email-username')
         EMAIL_PASSWORD = credentials('email-password')
-        GITHUB_PAT = credentials('github-pat') // GitHub Personal Access Token
+        GITHUB_PAT = credentials('github-pat')
         NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to where Node.js is installed
         NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to npm binaries
         PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add Node.js and npm to PATH
@@ -19,9 +19,9 @@ pipeline {
                 script {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: '*/test']], // Ensures 'test' branch is checked out
+                        branches: [[name: '*/test']],
                         doGenerateSubmoduleConfigurations: false,
-                        extensions: [[$class: 'LocalBranch', localBranch: 'test']], // Ensures Jenkins checks out the branch properly
+                        extensions: [[$class: 'LocalBranch', localBranch: 'test']],
                         userRemoteConfigs: [[
                             url: 'https://github.com/kudaykiranreddy/React_app_AWS.git',
                             credentialsId: 'github-pat'
@@ -34,11 +34,18 @@ pipeline {
         stage('Debug Branch Name') {
             steps {
                 script {
-                    // Print the branch to check if the environment variable works correctly
                     def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
                     echo "Current branch is: ${branchName}"
-                    env.BRANCH_NAME = branchName  // Ensure it's set for later stages
+                    env.BRANCH_NAME = branchName
                 }
+            }
+        }
+
+        stage('Verify GitHub CLI') {
+            steps {
+                echo "Checking GitHub CLI installation..."
+                bat 'where gh'
+                bat 'gh --version'
             }
         }
 
@@ -91,27 +98,24 @@ pipeline {
         stage('Create Pull Request for Test to Prod') {
             when {
                 expression { 
-                    // Checking if the current branch is 'test'
                     return env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test'
                 }
             }
             steps {
+                echo "Logging into GitHub CLI..."
+                bat 'gh auth status'
+                
                 echo "Creating pull request from test to prod..."
-                script {
-                    def response = sh(script: """
-                        curl -X POST -H "Authorization: token ${GITHUB_PAT}" \
-                        -d '{"title": "Merge Test into Prod", "head": "test", "base": "prod", "body": "This PR merges changes from the test branch to the prod branch."}' \
-                        https://api.github.com/repos/kudaykiranreddy/React_app_AWS/pulls
-                    """, returnStdout: true).trim()
-                    echo "Pull request response: ${response}"
-                }
+                bat '''
+                echo | set /p="%GITHUB_PAT%" | gh auth login --with-token
+                gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
+                '''
             }
         }
 
         stage('Send Email Notification') {
             when {
                 expression { 
-                    // Checking if the current branch is 'test'
                     return env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test'
                 }
             }
