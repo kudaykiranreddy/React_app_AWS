@@ -52,6 +52,13 @@ pipeline {
             }
         }
 
+        stage('Install npx') {
+            steps {
+                echo "Installing npx..."
+                bat 'npm install -g npx'
+            }
+        }
+
         stage('Install Dependencies') {
             steps {
                 echo "Installing dependencies..."
