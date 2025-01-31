@@ -6,7 +6,7 @@ pipeline {
         NETLIFY_TEST_SITE_ID = credentials('netlify-test-site-id')
         EMAIL_USERNAME = credentials('email-username')
         EMAIL_PASSWORD = credentials('email-password')
-        GITHUB_PAT = credentials('github-pat')
+        GITHUB_PAT = credentials('github-pat') // GitHub Personal Access Token
         NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to where Node.js is installed
         NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to npm binaries
         PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add Node.js and npm to PATH
@@ -97,10 +97,14 @@ pipeline {
             }
             steps {
                 echo "Creating pull request from test to prod..."
-                bat '''
-                echo "%GITHUB_PAT%" | gh auth login --with-token
-                gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
-                '''
+                script {
+                    def response = sh(script: """
+                        curl -X POST -H "Authorization: token ${GITHUB_PAT}" \
+                        -d '{"title": "Merge Test into Prod", "head": "test", "base": "prod", "body": "This PR merges changes from the test branch to the prod branch."}' \
+                        https://api.github.com/repos/kudaykiranreddy/React_app_AWS/pulls
+                    """, returnStdout: true).trim()
+                    echo "Pull request response: ${response}"
+                }
             }
         }
 
