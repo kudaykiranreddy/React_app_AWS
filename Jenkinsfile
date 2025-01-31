@@ -7,9 +7,9 @@ pipeline {
         EMAIL_USERNAME = credentials('email-username')
         EMAIL_PASSWORD = credentials('email-password')
         GITHUB_PAT = credentials('github-pat')
-        NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to where Node.js is installed
-        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to npm binaries
-        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add Node.js and npm to PATH
+        NODE_HOME = 'C:\\Program Files\\nodejs'
+        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'
+        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"
     }
 
     stages {
@@ -41,11 +41,13 @@ pipeline {
             }
         }
 
-        stage('Verify GitHub CLI') {
+        stage('Authenticate GitHub CLI') {
             steps {
-                echo "Checking GitHub CLI installation..."
-                bat 'where gh'
-                bat 'gh --version'
+                echo "Authenticating GitHub CLI..."
+                bat '''
+                echo "%GITHUB_PAT%" | gh auth login --with-token
+                gh auth status
+                '''
             }
         }
 
@@ -102,14 +104,16 @@ pipeline {
                 }
             }
             steps {
-                echo "Logging into GitHub CLI..."
-                bat 'gh auth status'
-                
                 echo "Creating pull request from test to prod..."
-                bat '''
-                echo | set /p="%GITHUB_PAT%" | gh auth login --with-token
-                gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
-                '''
+                script {
+                    def prResult = bat(script: '''
+                        gh pr create --base prod --head test --title "Merge Test into Prod" --body "Merging test branch into production."
+                    ''', returnStatus: true)
+
+                    if (prResult != 0) {
+                        error("Failed to create pull request!")
+                    }
+                }
             }
         }
 
