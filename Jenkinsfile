@@ -52,13 +52,6 @@ pipeline {
             }
         }
 
-        stage('Install npx') {
-            steps {
-                echo "Installing npx..."
-                bat 'npm install -g npx'
-            }
-        }
-
         stage('Install Dependencies') {
             steps {
                 echo "Installing dependencies..."
@@ -92,25 +85,6 @@ pipeline {
                 dir('To_do_app') {
                     bat 'dir dist || echo "Build directory not found"'
                 }
-            }
-        }
-
-        stage('Deploy to Netlify (Test)') {
-            when {
-                expression { 
-                    // Checking if the current branch is 'test'
-                    return env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test'
-                }
-            }
-            steps {
-                echo "Deploying to Netlify (Test)..."
-                bat '''
-                npx netlify deploy ^
-                    --auth %NETLIFY_AUTH_TOKEN% ^
-                    --site %NETLIFY_TEST_SITE_ID% ^
-                    --dir To_do_app\\dist ^
-                    --message "Test deployment"
-                '''
             }
         }
 
