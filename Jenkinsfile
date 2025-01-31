@@ -8,8 +8,8 @@ pipeline {
         EMAIL_PASSWORD = credentials('email-password')
         GITHUB_PAT = credentials('github-pat')
         NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to where Node.js is installed
-        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to where npm binaries are installed
-        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add both Node.js and npm to the PATH
+        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to npm binaries
+        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add Node.js and npm to PATH
     }
 
     stages {
@@ -19,7 +19,7 @@ pipeline {
                 script {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: 'refs/heads/test']], // Ensures 'test' branch is checked out
+                        branches: [[name: '*/test']], // Ensures 'test' branch is checked out
                         doGenerateSubmoduleConfigurations: false,
                         extensions: [[$class: 'LocalBranch', localBranch: 'test']], // Ensures Jenkins checks out the branch properly
                         userRemoteConfigs: [[
@@ -31,11 +31,20 @@ pipeline {
             }
         }
 
+        stage('Debug Branch Name') {
+            steps {
+                script {
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Current branch is: ${branchName}"
+                    env.BRANCH_NAME = branchName  // Ensure it's set for later stages
+                }
+            }
+        }
+
         stage('Set Up Node.js') {
             steps {
                 echo "Setting up Node.js environment..."
                 script {
-                    // Verify Node and npm versions
                     bat 'node -v'
                     bat 'npm -v'
                 }
@@ -78,27 +87,20 @@ pipeline {
             }
         }
 
-        stage('Debug Branch Name') {
-            steps {
-                script {
-                    // Get the current branch name and set the environment variable manually
-                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    echo "Current branch is: ${branchName}"
-                    env.BRANCH_NAME = branchName
-                }
-            }
-        }
-
         stage('Deploy to Netlify (Test)') {
             when {
-                expression { env.BRANCH_NAME == 'test' }
+                expression { 
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Detected branch: ${branchName}"
+                    return branchName == 'test'
+                }
             }
             steps {
                 echo "Deploying to Netlify (Test)..."
                 bat '''
                 npx netlify deploy ^
-                    --auth $NETLIFY_AUTH_TOKEN ^
-                    --site $NETLIFY_TEST_SITE_ID ^
+                    --auth %NETLIFY_AUTH_TOKEN% ^
+                    --site %NETLIFY_TEST_SITE_ID% ^
                     --dir To_do_app\\dist ^
                     --message "Test deployment"
                 '''
@@ -107,12 +109,15 @@ pipeline {
 
         stage('Create Pull Request for Test to Prod') {
             when {
-                expression { env.BRANCH_NAME == 'test' }
+                expression { 
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    return branchName == 'test'
+                }
             }
             steps {
                 echo "Creating pull request from test to prod..."
                 bat '''
-                echo "${GITHUB_PAT}" | gh auth login --with-token
+                echo "%GITHUB_PAT%" | gh auth login --with-token
                 gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
                 '''
             }
@@ -120,7 +125,10 @@ pipeline {
 
         stage('Send Email Notification') {
             when {
-                expression { env.BRANCH_NAME == 'test' }
+                expression { 
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    return branchName == 'test'
+                }
             }
             steps {
                 echo "Sending email notification for PR creation..."
