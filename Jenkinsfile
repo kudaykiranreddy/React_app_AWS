@@ -2,7 +2,12 @@ pipeline {
     agent any
 
     environment {
-        NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to Node.js
+        NETLIFY_AUTH_TOKEN = credentials('netlify-auth-token')
+        NETLIFY_TEST_SITE_ID = credentials('netlify-test-site-id')
+        EMAIL_USERNAME = credentials('email-username')
+        EMAIL_PASSWORD = credentials('email-password')
+        GITHUB_PAT = credentials('github-pat')
+        NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to where Node.js is installed
         NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to npm binaries
         PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add Node.js and npm to PATH
     }
@@ -29,7 +34,10 @@ pipeline {
         stage('Debug Branch Name') {
             steps {
                 script {
-                    echo "Jenkins GIT_BRANCH: ${env.GIT_BRANCH}"
+                    // Print the branch to check if the environment variable works correctly
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Current branch is: ${branchName}"
+                    env.BRANCH_NAME = branchName  // Ensure it's set for later stages
                 }
             }
         }
@@ -82,51 +90,53 @@ pipeline {
 
         stage('Deploy to Netlify (Test)') {
             when {
-                expression { env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test' }
+                expression { 
+                    // Checking if the current branch is 'test'
+                    return env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test'
+                }
             }
             steps {
                 echo "Deploying to Netlify (Test)..."
-                withCredentials([string(credentialsId: 'netlify-auth-token', variable: 'NETLIFY_AUTH_TOKEN'),
-                                 string(credentialsId: 'netlify-test-site-id', variable: 'NETLIFY_TEST_SITE_ID')]) {
-                    bat '''
-                    npx netlify deploy ^
-                        --auth %NETLIFY_AUTH_TOKEN% ^
-                        --site %NETLIFY_TEST_SITE_ID% ^
-                        --dir To_do_app\\dist ^
-                        --message "Test deployment"
-                    '''
-                }
+                bat '''
+                npx netlify deploy ^
+                    --auth %NETLIFY_AUTH_TOKEN% ^
+                    --site %NETLIFY_TEST_SITE_ID% ^
+                    --dir To_do_app\\dist ^
+                    --message "Test deployment"
+                '''
             }
         }
 
         stage('Create Pull Request for Test to Prod') {
             when {
-                expression { env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test' }
+                expression { 
+                    // Checking if the current branch is 'test'
+                    return env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test'
+                }
             }
             steps {
                 echo "Creating pull request from test to prod..."
-                withCredentials([string(credentialsId: 'github-pat', variable: 'GITHUB_PAT')]) {
-                    bat '''
-                    echo "%GITHUB_PAT%" | gh auth login --with-token
-                    gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
-                    '''
-                }
+                bat '''
+                echo "%GITHUB_PAT%" | gh auth login --with-token
+                gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
+                '''
             }
         }
 
         stage('Send Email Notification') {
             when {
-                expression { env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test' }
+                expression { 
+                    // Checking if the current branch is 'test'
+                    return env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test'
+                }
             }
             steps {
                 echo "Sending email notification for PR creation..."
-                withCredentials([usernamePassword(credentialsId: 'email-credentials', usernameVariable: 'EMAIL_USERNAME', passwordVariable: 'EMAIL_PASSWORD')]) {
-                    mail to: 'ukalicheti@anergroup.com',
-                         subject: 'Pull Request Created: Test to Prod',
-                         body: 'A pull request has been created to merge changes from the test branch to the prod branch.',
-                         from: 'kudaykiranreddy143@gmail.com',
-                         replyTo: 'kudaykiranreddy143@gmail.com'
-                }
+                mail to: 'ukalicheti@anergroup.com',
+                     subject: 'Pull Request Created: Test to Prod',
+                     body: 'A pull request has been created to merge changes from the test branch to the prod branch.',
+                     from: 'kudaykiranreddy143@gmail.com',
+                     replyTo: 'kudaykiranreddy143@gmail.com'
             }
         }
     }
