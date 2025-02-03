@@ -41,17 +41,6 @@ pipeline {
             }
         }
 
-        stage('Authenticate GitHub CLI') {
-            steps {
-                echo "Authenticating GitHub CLI..."
-                script {
-                    bat '''
-                    echo %GITHUB_PAT% | gh auth login --with-token
-                    gh auth status
-                    '''
-                }
-            }
-        }
 
         stage('Set Up Node.js') {
             steps {
