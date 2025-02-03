@@ -12,6 +12,7 @@ pipeline {
         REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
         MAIN_BRANCH = "test"
         PROD_BRANCH = "prod"
+        PATH = "/var/lib/jenkins/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/NodeJS_18/bin:$PATH" // Add Node.js binary path to PATH
     }
  
     stages {
