@@ -92,7 +92,9 @@ pipeline {
 
         stage('Create Pull Request for Test to Prod') {
             when {
-                branch 'test'  // Trigger when push happens to the 'test' branch
+                expression {
+                    return env.BRANCH_NAME == 'test'
+                }
             }
             steps {
                 echo "Creating pull request from test to prod..."
@@ -122,7 +124,9 @@ pipeline {
 
         stage('Send Email Notification') {
             when {
-                branch 'test'  // Trigger when push happens to the 'test' branch
+                expression {
+                    return env.BRANCH_NAME == 'test'
+                }
             }
             steps {
                 echo "Sending email notification for PR creation..."
