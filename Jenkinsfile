@@ -6,7 +6,7 @@ pipeline {
         NETLIFY_TEST_SITE_ID = credentials('netlify-test-site-id')
         EMAIL_USERNAME = credentials('email-username')
         EMAIL_PASSWORD = credentials('email-password')
-        GITHUB_PAT = credentials('github-pat')  // GitHub Personal Access Token
+        GITHUB_PAT = credentials('github-pat')  // GitHub Personal Access Tokens
         NODE_HOME = 'C:\\Program Files\\nodejs'
         NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'
         PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"
