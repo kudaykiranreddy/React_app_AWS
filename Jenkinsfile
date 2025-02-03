@@ -1,10 +1,10 @@
 pipeline {
     agent any
- 
+
     tools {
-        nodejs "NodeJS_18"
+        nodejs "NodeJS_18" // Ensure this matches the configured NodeJS tool name
     }
- 
+
     environment {
         NETLIFY_AUTH_TOKEN = credentials('netlify_token')
         NETLIFY_SITE_ID = '0773b2bc-94cd-4bd1-941c-2aebdf8fa106'
@@ -12,9 +12,8 @@ pipeline {
         REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
         MAIN_BRANCH = "test"
         PROD_BRANCH = "prod"
-        PATH = "/var/lib/jenkins/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/NodeJS_18/bin:$PATH" // Add Node.js binary path to PATH
     }
- 
+
     stages {
         stage('Checkout Code') {
             steps {
@@ -28,7 +27,7 @@ pipeline {
                 }
             }
         }
- 
+
         stage('Verify Node.js & npm') {
             steps {
                 script {
@@ -42,7 +41,7 @@ pipeline {
                 }
             }
         }
- 
+
         stage('Clean & Install Dependencies') {
             steps {
                 script {
@@ -56,7 +55,7 @@ pipeline {
                 }
             }
         }
- 
+
         stage('Run Tests') {
             steps {
                 script {
@@ -69,7 +68,7 @@ pipeline {
                 }
             }
         }
- 
+
         stage('Create Pull Request for Production Merge') {
             steps {
                 script {
@@ -81,7 +80,7 @@ pipeline {
                         git config --global user.name "kudaykiranreddy"
                         git remote set-url origin https://$GITHUB_TOKEN@github.com/kudaykiranreddy/React_app_AWS.git
                         git push origin temp-merge-branch
- 
+
                         PR_RESPONSE=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
                             -H "Accept: application/vnd.github.v3+json" \
                             https://api.github.com/repos/kudaykiranreddy/React_app_AWS/pulls \
@@ -91,14 +90,14 @@ pipeline {
                                 "base": "prod",
                                 "body": "Auto-generated pull request for merging test into prod."
                             }')
- 
+
                         echo "✅ Pull request created. Please review and merge manually."
                     '''
                 }
             }
         }
     }
- 
+
     post {
         success {
             echo "🎉 ✅ Pull request created successfully!"
