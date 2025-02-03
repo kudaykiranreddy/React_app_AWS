@@ -101,25 +101,27 @@ pipeline {
             steps {
                 echo "Creating pull request from test to prod..."
                 script {
-                    def prTitle = "Auto PR: ${SOURCE_BRANCH} to ${TARGET_BRANCH}"
-                    def prBody = "This pull request was created automatically via Jenkins."
+                    sh '''
+                        git checkout -b temp-merge-branch
+                        # Set GitHub credentials to authenticate
+                        git config --global user.email "kudaykiranreddy143@gmail.com"
+                        git config --global user.name "kudaykiranreddy"
+                        # Update the origin URL with the GitHub token
+                        git remote set-url origin https://$GITHUB_PAT@github.com/kudaykiranreddy/React_app_AWS.git
+                        git push origin temp-merge-branch
 
-                    def response = httpRequest(
-                        url: "https://api.github.com/repos/${GITHUB_REPO}/pulls",
-                        customHeaders: [[name: 'Authorization', value: "token ${GITHUB_PAT}"]],
-                        httpMode: 'POST',
-                        contentType: 'APPLICATION_JSON',
-                        requestBody: """
-                        {
-                            "title": "${prTitle}",
-                            "head": "${SOURCE_BRANCH}",
-                            "base": "${TARGET_BRANCH}",
-                            "body": "${prBody}"
-                        }
-                        """
-                    )
-
-                    echo "Pull request created: ${response}"
+                        PR_RESPONSE=$(curl -X POST -H "Authorization: token $GITHUB_PAT" \
+                            -H "Accept: application/vnd.github.v3+json" \
+                            https://api.github.com/repos/kudaykiranreddy/React_app_AWS/pulls \
+                            -d '{
+                                "title": "Auto PR: test to prod",
+                                "head": "test",
+                                "base": "prod",
+                                "body": "Auto-generated pull request for merging test into prod."
+                            }')
+ 
+                        echo "✅ Pull request created. Please review and merge manually."
+                    '''
                 }
             }
         }
