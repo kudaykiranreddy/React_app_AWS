@@ -44,7 +44,6 @@ pipeline {
             }
         }
 
-
         stage('Set Up Node.js') {
             steps {
                 echo "Setting up Node.js environment..."
@@ -93,7 +92,7 @@ pipeline {
 
         stage('Create Pull Request for Test to Prod') {
             when {
-                expression { return env.BRANCH_NAME == 'test' }
+                branch 'test'  // Trigger when push happens to the 'test' branch
             }
             steps {
                 echo "Creating pull request from test to prod..."
@@ -123,7 +122,8 @@ pipeline {
 
         stage('Send Email Notification') {
             when {
-                expression { return env.BRANCH_NAME == 'test' }
+                branch 'test'  // Trigger when push happens to the 'test' branch
+                success()  // Send email only if the build is successful
             }
             steps {
                 echo "Sending email notification for PR creation..."
