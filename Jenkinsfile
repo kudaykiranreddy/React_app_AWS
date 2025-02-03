@@ -10,6 +10,9 @@ pipeline {
         NODE_HOME = 'C:\\Program Files\\nodejs'
         NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'
         PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"
+        GITHUB_REPO = 'kudaykiranreddy/React_app_AWS'  // Replace with your GitHub repository
+        SOURCE_BRANCH = 'test'  // Source branch for the PR
+        TARGET_BRANCH = 'prod'  // Target branch for the PR
     }
 
     stages {
@@ -17,11 +20,11 @@ pipeline {
             steps {
                 echo "Checking out repository..."
                 script {
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: '*/test']],
-                        doGenerateSubmoduleConfigurations: false,
-                        extensions: [[$class: 'LocalBranch', localBranch: 'test']],
+                    checkout([ 
+                        $class: 'GitSCM', 
+                        branches: [[name: '*/test']], 
+                        doGenerateSubmoduleConfigurations: false, 
+                        extensions: [[$class: 'LocalBranch', localBranch: 'test']], 
                         userRemoteConfigs: [[
                             url: 'https://github.com/kudaykiranreddy/React_app_AWS.git',
                             credentialsId: 'github-pat'
@@ -94,9 +97,27 @@ pipeline {
             }
             steps {
                 echo "Creating pull request from test to prod..."
-                bat '''
-                gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
-                '''
+                script {
+                    def prTitle = "Auto PR: ${SOURCE_BRANCH} to ${TARGET_BRANCH}"
+                    def prBody = "This pull request was created automatically via Jenkins."
+
+                    def response = httpRequest(
+                        url: "https://api.github.com/repos/${GITHUB_REPO}/pulls",
+                        customHeaders: [[name: 'Authorization', value: "token ${GITHUB_PAT}"]],
+                        httpMode: 'POST',
+                        contentType: 'APPLICATION_JSON',
+                        requestBody: """
+                        {
+                            "title": "${prTitle}",
+                            "head": "${SOURCE_BRANCH}",
+                            "base": "${TARGET_BRANCH}",
+                            "body": "${prBody}"
+                        }
+                        """
+                    )
+
+                    echo "Pull request created: ${response}"
+                }
             }
         }
 
