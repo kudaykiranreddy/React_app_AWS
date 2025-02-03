@@ -1,121 +1,92 @@
 pipeline {
     agent any
-
-    environment {
-        NETLIFY_AUTH_TOKEN = credentials('netlify-auth-token')
-        NETLIFY_TEST_SITE_ID = credentials('netlify-test-site-id')
-        EMAIL_USERNAME = credentials('email-username')
-        EMAIL_PASSWORD = credentials('email-password')
-        GITHUB_PAT = credentials('github-pat')  // GitHub Personal Access Tokens
-        NODE_HOME = 'C:\\Program Files\\nodejs'
-        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'
-        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"
-        GITHUB_REPO = 'kudaykiranreddy/React_app_AWS'  // Replace with your GitHub repository
-        SOURCE_BRANCH = 'test'  // Source branch for the PR
-        TARGET_BRANCH = 'prod'  // Target branch for the PR
+ 
+    tools {
+        nodejs "NodeJS_18"
     }
-
+ 
+    environment {
+        NETLIFY_AUTH_TOKEN = credentials('netlify_token')
+        NETLIFY_SITE_ID = '0773b2bc-94cd-4bd1-941c-2aebdf8fa106'
+        GITHUB_TOKEN = credentials('github_token')
+        REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
+        MAIN_BRANCH = "test"
+        PROD_BRANCH = "prod"
+    }
+ 
     stages {
-        stage('Checkout Repository') {
-            steps {
-                echo "Checking out repository..."
-                script {
-                    checkout([ 
-                        $class: 'GitSCM', 
-                        branches: [[name: '*/test']], 
-                        doGenerateSubmoduleConfigurations: false, 
-                        extensions: [[$class: 'LocalBranch', localBranch: 'test']], 
-                        userRemoteConfigs: [[
-                            url: 'https://github.com/kudaykiranreddy/React_app_AWS.git',
-                            credentialsId: 'github-pat'
-                        ]]
-                    ])
-                }
-            }
-        }
-
-        stage('Debug Branch Name') {
+        stage('Checkout Code') {
             steps {
                 script {
-                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    echo "Current branch is: ${branchName}"
-                    env.BRANCH_NAME = branchName
+                    echo "🔄 Checking out code from GitHub..."
+                    sh '''
+                        rm -rf React_app_AWS || true
+                        git clone -b $MAIN_BRANCH $REPO_URL React_app_AWS || { echo "❌ Git clone failed"; exit 1; }
+                        echo "✅ Code checkout complete."
+                    '''
                 }
             }
         }
-
-        stage('Set Up Node.js') {
+ 
+        stage('Verify Node.js & npm') {
             steps {
-                echo "Setting up Node.js environment..."
                 script {
-                    bat 'node -v'
-                    bat 'npm -v'
+                    echo "🔍 Checking Node.js and npm versions..."
+                    sh '''
+                        if ! command -v node &> /dev/null; then echo "❌ Node.js not found! Install it on Jenkins."; exit 1; fi
+                        if ! command -v npm &> /dev/null; then echo "❌ npm not found! Install it on Jenkins."; exit 1; fi
+                        echo "✅ Node.js Version: $(node -v)"
+                        echo "✅ npm Version: $(npm -v)"
+                    '''
                 }
             }
         }
-
-        stage('Install Dependencies') {
+ 
+        stage('Clean & Install Dependencies') {
             steps {
-                echo "Installing dependencies..."
-                dir('To_do_app') {
-                    bat 'npm ci'
-                }
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                echo "Running tests..."
-                dir('To_do_app') {
-                    bat 'npm test'
-                }
-            }
-        }
-
-        stage('Build the App') {
-            steps {
-                echo "Building the application..."
-                dir('To_do_app') {
-                    bat 'npm run build --verbose'
-                }
-            }
-        }
-
-        stage('List Build Directory') {
-            steps {
-                echo "Listing build directory..."
-                dir('To_do_app') {
-                    bat 'dir dist || echo "Build directory not found"'
-                }
-            }
-        }
-
-        stage('Create Pull Request for Test to Prod') {
-            when {
-                expression {
-                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    echo "Branch name is: ${branchName}"  // Debug branch name
-                    return branchName == 'test'
-                }
-            }
-            steps {
-                echo "Creating pull request from test to prod..."
                 script {
                     sh '''
+                        echo "🧹 Cleaning old dependencies..."
+                        cd React_app_AWS
+                        rm -rf node_modules package-lock.json
+                        echo "📦 Installing dependencies..."
+                        npm install || { echo "❌ Failed to install dependencies"; exit 1; }
+                    '''
+                }
+            }
+        }
+ 
+        stage('Run Tests') {
+            steps {
+                script {
+                    sh '''
+                        echo "🧪 Running test cases..."
+                        cd React_app_AWS
+                        npm test || { echo "❌ Tests failed"; exit 1; }
+                        echo "✅ All tests passed!"
+                    '''
+                }
+            }
+        }
+ 
+        stage('Create Pull Request for Production Merge') {
+            steps {
+                script {
+                    echo "📌 Creating pull request for merging test into prod..."
+                    sh '''
+                        cd React_app_AWS
                         git checkout -b temp-merge-branch
-                        # Set GitHub credentials to authenticate
                         git config --global user.email "kudaykiranreddy143@gmail.com"
                         git config --global user.name "kudaykiranreddy"
-                        # Update the origin URL with the GitHub token
-                        git remote set-url origin https://$GITHUB_PAT@github.com/kudaykiranreddy/React_app_AWS.git
+                        git remote set-url origin https://$GITHUB_TOKEN@github.com/kudaykiranreddy/React_app_AWS.git
                         git push origin temp-merge-branch
-
-                        PR_RESPONSE=$(curl -X POST -H "Authorization: token $GITHUB_PAT" \
+ 
+                        PR_RESPONSE=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
                             -H "Accept: application/vnd.github.v3+json" \
                             https://api.github.com/repos/kudaykiranreddy/React_app_AWS/pulls \
                             -d '{
-                                "title": "Auto PR: test to prod",
-                                "head": "test",
+                                "title": "Merge test into prod",
+                                "head": "temp-merge-branch",
                                 "base": "prod",
                                 "body": "Auto-generated pull request for merging test into prod."
                             }')
@@ -125,40 +96,14 @@ pipeline {
                 }
             }
         }
-
-        stage('Send Email Notification') {
-            when {
-                expression {
-                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    return branchName == 'test'
-                }
-            }
-            steps {
-                echo "Sending email notification for PR creation..."
-                mail to: 'ukalicheti@anergroup.com',
-                     subject: 'Pull Request Created: Test to Prod',
-                     body: 'A pull request has been created to merge changes from the test branch to the prod branch.',
-                     from: 'kudaykiranreddy143@gmail.com',
-                     replyTo: 'kudaykiranreddy143@gmail.com'
-            }
-        }
     }
-
+ 
     post {
-        always {
-            echo "Cleaning up..."
-            cleanWs()
-        }
         success {
-            echo "Pipeline completed successfully!"
+            echo "🎉 ✅ Pull request created successfully!"
         }
         failure {
-            echo "Pipeline failed!"
-            mail to: 'ukalicheti@anergroup.com',
-                 subject: 'Pipeline Failed: Test Deployment',
-                 body: 'The pipeline for the test deployment has failed. Please check the logs for more details.',
-                 from: 'kudaykiranreddy143@gmail.com',
-                 replyTo: 'kudaykiranreddy143@gmail.com'
+            echo "❌ Failed to create pull request! Check logs for details."
         }
     }
 }
