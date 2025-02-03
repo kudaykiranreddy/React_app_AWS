@@ -6,7 +6,7 @@ pipeline {
         NETLIFY_TEST_SITE_ID = credentials('netlify-test-site-id')
         EMAIL_USERNAME = credentials('email-username')
         EMAIL_PASSWORD = credentials('email-password')
-        GITHUB_PAT = credentials('github-pat')
+        GITHUB_PAT = credentials('github-pat')  // GitHub Personal Access Token
         NODE_HOME = 'C:\\Program Files\\nodejs'
         NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'
         PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"
@@ -44,10 +44,12 @@ pipeline {
         stage('Authenticate GitHub CLI') {
             steps {
                 echo "Authenticating GitHub CLI..."
-                bat '''
-                echo "%GITHUB_PAT%" | gh auth login --with-token
-                gh auth status
-                '''
+                script {
+                    bat '''
+                    echo %GITHUB_PAT% | gh auth login --with-token
+                    gh auth status
+                    '''
+                }
             }
         }
 
@@ -99,29 +101,19 @@ pipeline {
 
         stage('Create Pull Request for Test to Prod') {
             when {
-                expression { 
-                    return env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test'
-                }
+                expression { return env.BRANCH_NAME == 'test' }
             }
             steps {
                 echo "Creating pull request from test to prod..."
-                script {
-                    def prResult = bat(script: '''
-                        gh pr create --base prod --head test --title "Merge Test into Prod" --body "Merging test branch into production."
-                    ''', returnStatus: true)
-
-                    if (prResult != 0) {
-                        error("Failed to create pull request!")
-                    }
-                }
+                bat '''
+                gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
+                '''
             }
         }
 
         stage('Send Email Notification') {
             when {
-                expression { 
-                    return env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test'
-                }
+                expression { return env.BRANCH_NAME == 'test' }
             }
             steps {
                 echo "Sending email notification for PR creation..."
