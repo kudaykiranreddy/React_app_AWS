@@ -93,8 +93,9 @@ pipeline {
         stage('Create Pull Request for Test to Prod') {
             when {
                 expression {
-                    echo "Branch name is: ${env.BRANCH_NAME}"  // Debug branch name
-                    return env.BRANCH_NAME == 'test'
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Branch name is: ${branchName}"  // Debug branch name
+                    return branchName == 'test'
                 }
             }
             steps {
@@ -126,7 +127,8 @@ pipeline {
         stage('Send Email Notification') {
             when {
                 expression {
-                    return env.BRANCH_NAME == 'test'
+                    def branchName = bat(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    return branchName == 'test'
                 }
             }
             steps {
