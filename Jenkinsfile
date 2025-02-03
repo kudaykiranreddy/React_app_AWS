@@ -93,6 +93,7 @@ pipeline {
         stage('Create Pull Request for Test to Prod') {
             when {
                 expression {
+                    echo "Branch name is: ${env.BRANCH_NAME}"  // Debug branch name
                     return env.BRANCH_NAME == 'test'
                 }
             }
