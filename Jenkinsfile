@@ -123,7 +123,6 @@ pipeline {
         stage('Send Email Notification') {
             when {
                 branch 'test'  // Trigger when push happens to the 'test' branch
-                success()  // Send email only if the build is successful
             }
             steps {
                 echo "Sending email notification for PR creation..."
