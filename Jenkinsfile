@@ -8,6 +8,7 @@ pipeline {
     environment {
         NETLIFY_AUTH_TOKEN = credentials('netlify_token')
         NETLIFY_SITE_ID = '0773b2bc-94cd-4bd1-941c-2aebdf8fa106'
+        NETLIFY_TEST_SITE_ID = 'your_test_site_id_here'  // Add your Netlify test site ID
         GITHUB_TOKEN = credentials('github_token')
         REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
         MAIN_BRANCH = "test"
@@ -84,6 +85,25 @@ pipeline {
             }
         }
 
+        stage('Deploy to Netlify (Test)') {
+            when {
+                expression { env.BRANCH_NAME == 'test' }
+            }
+            steps {
+                echo "Deploying to Netlify (Test)..."
+                sh '''
+                    cd React_app_AWS/To_do_app  # Ensure you're in the right directory for deployment
+                    npm install -g netlify-cli
+                    npx netlify deploy \
+                        --auth $NETLIFY_AUTH_TOKEN \
+                        --site $NETLIFY_TEST_SITE_ID \
+                        --dir To_do_app/dist \
+                        --message "Test deployment" || { echo "❌ Test deployment to Netlify failed"; exit 1; }
+                    echo "✅ Test deployment successful!"
+                '''
+            }
+        }
+
         stage('Create Pull Request for Production Merge') {
             steps {
                 script {
@@ -115,10 +135,10 @@ pipeline {
 
     post {
         success {
-            echo "🎉 ✅ Pull request created successfully!"
+            echo "🎉 ✅ Pull request created and deployment successful!"
         }
         failure {
-            echo "❌ Failed to create pull request! Check logs for details."
+            echo "❌ Failed to create pull request or deployment! Check logs for details."
         }
     }
 }
