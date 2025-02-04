@@ -90,7 +90,7 @@ pipeline {
                 script {
                     echo "🚀 Deploying to Netlify (Test)..."
                     sh '''
-                        cd React_app_AWS/To_do_app  # Ensure you're in the right directory for deployment
+                        cd React_app_AWS/To_do_app  # Ensure you're in the correct directory for deployment
                         git checkout test
                         git pull origin test
                         
@@ -98,12 +98,14 @@ pipeline {
                         npm install
                         npm run build  # This generates the dist directory (or build folder depending on configuration)
 
-                        # Deploy to Netlify
+                        # Install Netlify CLI
                         npm install -g netlify-cli
+
+                        # Deploy to Netlify using the correct directory
                         npx netlify deploy \
                             --auth $NETLIFY_AUTH_TOKEN \
                             --site $NETLIFY_SITE_ID \
-                            --dir To_do_app/dist \
+                            --dir dist \  # Correct path to dist or build directory
                             --message "Test deployment" || { echo "❌ Test deployment to Netlify failed"; exit 1; }
 
                         echo "✅ Test deployment successful!"
@@ -111,6 +113,7 @@ pipeline {
                 }
             }
         }
+
 
 
 
