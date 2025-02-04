@@ -105,7 +105,7 @@ pipeline {
                         npx netlify deploy \
                             --auth $NETLIFY_AUTH_TOKEN \
                             --site $NETLIFY_SITE_ID \
-                            --dir dist \  # Correct path to dist or build directory
+                            --dir dist  # Correct path to dist or build directory
                             --message "Test deployment" || { echo "❌ Test deployment to Netlify failed"; exit 1; }
 
                         echo "✅ Test deployment successful!"
