@@ -93,7 +93,7 @@ pipeline {
                         git checkout -b temp-merge-branch
                         git config --global user.email "kudaykiranreddy143@gmail.com"
                         git config --global user.name "kudaykiranreddy"
-                        git remote set-url origin https://$GITHUB_TOKEN@github.com/kudaykiranreddy/React_app_AWS.git
+                        git remote set-url origin https://"$GITHUB_TOKEN"@github.com/kudaykiranreddy/React_app_AWS.git
                         git push origin temp-merge-branch
 
                         PR_RESPONSE=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
