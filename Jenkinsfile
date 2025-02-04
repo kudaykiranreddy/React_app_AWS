@@ -1,151 +1,124 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs "NodeJS_18"  // Ensure this matches the tool name in Jenkins settings
+    }
+
     environment {
-        NODE_HOME = 'C:\\Program Files\\nodejs'  // Path to Node.js
-        NPM_BIN = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin'  // Path to npm binaries
-        PATH = "${NODE_HOME}\\;${NPM_BIN}\\;${env.PATH}"  // Add Node.js and npm to PATH
+        NETLIFY_AUTH_TOKEN = credentials('netlify_token')
+        NETLIFY_SITE_ID = '0773b2bc-94cd-4bd1-941c-2aebdf8fa106'
+        GITHUB_TOKEN = credentials('github_token')
+        REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
+        MAIN_BRANCH = "test"
+        PROD_BRANCH = "prod"
     }
 
     stages {
-        stage('Checkout Repository') {
+        stage('Checkout Code') {
             steps {
-                echo "Checking out repository..."
                 script {
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: '*/test']], // Ensures 'test' branch is checked out
-                        doGenerateSubmoduleConfigurations: false,
-                        extensions: [[$class: 'LocalBranch', localBranch: 'test']], // Ensures Jenkins checks out the branch properly
-                        userRemoteConfigs: [[
-                            url: 'https://github.com/kudaykiranreddy/React_app_AWS.git',
-                            credentialsId: 'github-pat'
-                        ]]
-                    ])
+                    echo "🔄 Checking out code from GitHub..."
+                    sh '''
+                        rm -rf React_app_AWS || true
+                        git clone -b $MAIN_BRANCH $REPO_URL React_app_AWS || { echo "❌ Git clone failed"; exit 1; }
+                        echo "✅ Code checkout complete."
+                    '''
                 }
             }
         }
 
-        stage('Debug Branch Name') {
+        stage('Verify Directory Structure') {
             steps {
                 script {
-                    echo "Jenkins GIT_BRANCH: ${env.GIT_BRANCH}"
+                    sh '''
+                        echo "📁 Checking if React_app_AWS/To_do_app exists..."
+                        ls -l React_app_AWS || { echo "❌ React_app_AWS repo not found!"; exit 1; }
+                        ls -l React_app_AWS/To_do_app || { echo "❌ To_do_app directory not found!"; exit 1; }
+                        echo "✅ Directory structure verified."
+                    '''
                 }
             }
         }
 
-        stage('Set Up Node.js') {
+        stage('Verify Node.js & npm') {
             steps {
-                echo "Setting up Node.js environment..."
                 script {
-                    bat 'node -v'
-                    bat 'npm -v'
+                    echo "🔍 Checking Node.js and npm versions..."
+                    sh '''
+                        echo "Using NodeJS from Jenkins tool config..."
+                        which node || { echo "❌ Node.js not found!"; exit 1; }
+                        which npm || { echo "❌ npm not found!"; exit 1; }
+                        echo "✅ Node.js Version: $(node -v)"
+                        echo "✅ npm Version: $(npm -v)"
+                    '''
                 }
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Clean & Install Dependencies') {
             steps {
-                echo "Installing dependencies..."
-                dir('To_do_app') {
-                    bat 'npm ci'
+                script {
+                    sh '''
+                        echo "🧹 Cleaning old dependencies..."
+                        cd React_app_AWS/To_do_app
+                        rm -rf node_modules package-lock.json
+                        
+                        echo "📦 Installing dependencies..."
+                        npm install || { echo "❌ Failed to install dependencies"; exit 1; }
+                    '''
                 }
             }
         }
 
         stage('Run Tests') {
             steps {
-                echo "Running tests..."
-                dir('To_do_app') {
-                    bat 'npm test'
-                }
-            }
-        }
-
-        stage('Build the App') {
-            steps {
-                echo "Building the application..."
-                dir('To_do_app') {
-                    bat 'npm run build --verbose'
-                }
-            }
-        }
-
-        stage('List Build Directory') {
-            steps {
-                echo "Listing build directory..."
-                dir('To_do_app') {
-                    bat 'dir dist || echo "Build directory not found"'
-                }
-            }
-        }
-
-        stage('Deploy to Netlify (Test)') {
-            when {
-                expression { env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test' }
-            }
-            steps {
-                echo "Deploying to Netlify (Test)..."
-                withCredentials([string(credentialsId: 'netlify-auth-token', variable: 'NETLIFY_AUTH_TOKEN'),
-                                 string(credentialsId: 'netlify-test-site-id', variable: 'NETLIFY_TEST_SITE_ID')]) {
-                    bat '''
-                    npx netlify deploy ^
-                        --auth %NETLIFY_AUTH_TOKEN% ^
-                        --site %NETLIFY_TEST_SITE_ID% ^
-                        --dir To_do_app\\dist ^
-                        --message "Test deployment"
+                script {
+                    sh '''
+                        echo "🧪 Running test cases..."
+                        cd React_app_AWS/To_do_app
+                        npm test || { echo "❌ Tests failed"; exit 1; }
+                        echo "✅ All tests passed!"
                     '''
                 }
             }
         }
 
-        stage('Create Pull Request for Test to Prod') {
-            when {
-                expression { env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test' }
-            }
+        stage('Create Pull Request for Production Merge') {
             steps {
-                echo "Creating pull request from test to prod..."
-                withCredentials([string(credentialsId: 'github-pat', variable: 'GITHUB_PAT')]) {
-                    bat '''
-                    echo "%GITHUB_PAT%" | gh auth login --with-token
-                    gh pr create --base prod --head test --title "Merge Test into Prod" --body "This PR merges changes from the test branch to the prod branch."
-                    '''
-                }
-            }
-        }
+                script {
+                    echo "📌 Creating pull request for merging test into prod..."
+                    sh '''
+                        cd React_app_AWS
+                        git checkout -b temp-merge-branch
+                        git config --global user.email "kudaykiranreddy143@gmail.com"
+                        git config --global user.name "kudaykiranreddy"
+                        git remote set-url origin https://$GITHUB_TOKEN@github.com/kudaykiranreddy/React_app_AWS.git
+                        git push origin temp-merge-branch
 
-        stage('Send Email Notification') {
-            when {
-                expression { env.GIT_BRANCH == 'origin/test' || env.GIT_BRANCH == 'test' }
-            }
-            steps {
-                echo "Sending email notification for PR creation..."
-                withCredentials([usernamePassword(credentialsId: 'email-credentials', usernameVariable: 'EMAIL_USERNAME', passwordVariable: 'EMAIL_PASSWORD')]) {
-                    mail to: 'ukalicheti@anergroup.com',
-                         subject: 'Pull Request Created: Test to Prod',
-                         body: 'A pull request has been created to merge changes from the test branch to the prod branch.',
-                         from: 'kudaykiranreddy143@gmail.com',
-                         replyTo: 'kudaykiranreddy143@gmail.com'
+                        PR_RESPONSE=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+                            -H "Accept: application/vnd.github.v3+json" \
+                            https://api.github.com/repos/kudaykiranreddy/React_app_AWS/pulls \
+                            -d '{
+                                "title": "Merge test into prod",
+                                "head": "temp-merge-branch",
+                                "base": "prod",
+                                "body": "Auto-generated pull request for merging test into prod."
+                            }')
+
+                        echo "✅ Pull request created. Please review and merge manually."
+                    '''
                 }
             }
         }
     }
 
     post {
-        always {
-            echo "Cleaning up..."
-            cleanWs()
-        }
         success {
-            echo "Pipeline completed successfully!"
+            echo "🎉 ✅ Pull request created successfully!"
         }
         failure {
-            echo "Pipeline failed!"
-            mail to: 'ukalicheti@anergroup.com',
-                 subject: 'Pipeline Failed: Test Deployment',
-                 body: 'The pipeline for the test deployment has failed. Please check the logs for more details.',
-                 from: 'kudaykiranreddy143@gmail.com',
-                 replyTo: 'kudaykiranreddy143@gmail.com'
+            echo "❌ Failed to create pull request! Check logs for details."
         }
     }
 }
