@@ -8,7 +8,7 @@ pipeline {
     environment {
         NETLIFY_AUTH_TOKEN = credentials('netlify_token')
         NETLIFY_SITE_ID = '0773b2bc-94cd-4bd1-941c-2aebdf8fa106'
-        NETLIFY_TEST_SITE_ID = 'your_test_site_id_here'  // Add your Netlify test site ID
+        //NETLIFY_TEST_SITE_ID = 'your_test_site_id_here'  // Add your Netlify test site ID
         GITHUB_TOKEN = credentials('github_token')
         REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
         MAIN_BRANCH = "test"
@@ -96,7 +96,7 @@ pipeline {
                         npm install -g netlify-cli
                         npx netlify deploy \
                             --auth $NETLIFY_AUTH_TOKEN \
-                            --site $NETLIFY_TEST_SITE_ID \
+                            --site $NETLIFY_SITE_ID \
                             --dir To_do_app/dist \
                             --message "Test deployment" || { echo "❌ Test deployment to Netlify failed"; exit 1; }
                         echo "✅ Test deployment successful!"
