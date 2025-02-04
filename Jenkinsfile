@@ -8,7 +8,6 @@ pipeline {
     environment {
         NETLIFY_AUTH_TOKEN = credentials('netlify_token')
         NETLIFY_SITE_ID = '0773b2bc-94cd-4bd1-941c-2aebdf8fa106'
-        //NETLIFY_TEST_SITE_ID = 'your_test_site_id_here'  // Add your Netlify test site ID
         GITHUB_TOKEN = credentials('github_token')
         REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
         MAIN_BRANCH = "test"
@@ -110,10 +109,6 @@ pipeline {
             }
         }
 
-
-
-
-
         stage('Create Pull Request for Production Merge') {
             steps {
                 script {
@@ -141,14 +136,34 @@ pipeline {
                 }
             }
         }
+
+        stage('Send Email Notification') {
+            steps {
+                echo "Sending email notification for PR creation..."
+                mail to: 'ukalicheti@anergroup.com',
+                     subject: 'Pull Request Created: Test to Prod',
+                     body: 'A pull request has been created to merge changes from the test branch to the prod branch.',
+                     from: 'kudaykiranreddy143@gmail.com',
+                     replyTo: 'kudaykiranreddy143@gmail.com'
+            }
+        }
     }
 
     post {
+        always {
+            echo "Cleaning up..."
+            cleanWs()
+        }
         success {
             echo "🎉 ✅ Pull request created and deployment successful!"
         }
         failure {
-            echo "❌ Failed to create pull request or deployment! Check logs for details."
+            echo "❌ Pipeline failed!"
+            mail to: 'ukalicheti@anergroup.com',
+                 subject: 'Pipeline Failed: Test Deployment',
+                 body: 'The pipeline for the test deployment has failed. Please check the logs for more details.',
+                 from: 'kudaykiranreddy143@gmail.com',
+                 replyTo: 'kudaykiranreddy143@gmail.com'
         }
     }
 }
