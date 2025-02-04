@@ -84,6 +84,31 @@ pipeline {
             }
         }
 
+        stage('Deploy to Netlify (Test)') {
+            steps {
+                script {
+                    echo "🚀 Deploying to Netlify (Test)..."
+                    sh '''
+                        cd React_app_AWS/To_do_app  # Ensure you're in the correct directory for deployment
+                        git checkout test
+                        git pull origin test
+                        
+                        # Install dependencies and build the project
+                        npm install
+                        npm run build  # This generates the dist directory (or build folder depending on configuration)
+
+                        # Install Netlify CLI
+                        npm install -g netlify-cli
+
+                        # Deploy to Netlify using the correct directory
+                        npx netlify deploy --auth $NETLIFY_AUTH_TOKEN --site $NETLIFY_SITE_ID --dir dist --message "Test deployment" || { echo "❌ Test deployment to Netlify failed"; exit 1; }
+
+                        echo "✅ Test deployment successful!"
+                    '''
+                }
+            }
+        }
+
         stage('Create Pull Request for Production Merge') {
             steps {
                 script {
@@ -111,14 +136,34 @@ pipeline {
                 }
             }
         }
+
+        stage('Send Email Notification') {
+            steps {
+                echo "Sending email notification for PR creation..."
+                mail to: 'ukalicheti@anergroup.com',
+                     subject: 'Pull Request Created: Test to Prod',
+                     body: 'A pull request has been created to merge changes from the test branch to the prod branch.',
+                     from: 'kudaykiranreddy143@gmail.com',
+                     replyTo: 'kudaykiranreddy143@gmail.com'
+            }
+        }
     }
 
     post {
+        always {
+            echo "Cleaning up..."
+            cleanWs()
+        }
         success {
-            echo "🎉 ✅ Pull request created successfully!"
+            echo "🎉 ✅ Pull request created and deployment successful!"
         }
         failure {
-            echo "❌ Failed to create pull request! Check logs for details."
+            echo "❌ Pipeline failed!"
+            mail to: 'ukalicheti@anergroup.com',
+                 subject: 'Pipeline Failed: Test Deployment',
+                 body: 'The pipeline for the test deployment has failed. Please check the logs for more details.',
+                 from: 'kudaykiranreddy143@gmail.com',
+                 replyTo: 'kudaykiranreddy143@gmail.com'
         }
     }
 }
