@@ -3,6 +3,7 @@ pipeline {
 
     tools {
         nodejs "NodeJS_18"  // Ensure this matches the tool name in Jenkins settings
+        sonarQube "SonarQube"  // Referring to the SonarQube scanner tool name
     }
 
     environment {
@@ -12,6 +13,7 @@ pipeline {
         REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
         MAIN_BRANCH = "test"
         PROD_BRANCH = "prod"
+        SONARQUBE_TOKEN = credentials('sonar_token_id')
     }
 
     stages {
@@ -79,6 +81,27 @@ pipeline {
                         cd React_app_AWS/To_do_app
                         npm test || { echo "❌ Tests failed"; exit 1; }
                         echo "✅ All tests passed!"
+                    '''
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    echo "🔍 Running SonarQube analysis..."
+                    sh '''
+                        cd React_app_AWS/To_do_app
+                        sonar-scanner \
+                          -Dsonar.projectKey=my-react-app \
+                          -Dsonar.projectName="My React Application" \
+                          -Dsonar.projectVersion=1.0.0 \
+                          -Dsonar.sources=src \
+                          -Dsonar.tests=src/__tests__ \
+                          -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
+                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov-report/index.html \
+                          -Dsonar.host.url=http://localhost:9001 \
+                          -Dsonar.login=$SONARQUBE_TOKEN || { echo "❌ SonarQube analysis failed"; exit 1; }
                     '''
                 }
             }
