@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         nodejs "NodeJS_18"  // Ensure this matches the tool name in Jenkins settings
-        sonar "SonarQube"  // Change 'sonarQube' to 'sonar' for the SonarQube scanner tool
+        sonarScanner "SonarQube Scanner"  // Correctly reference SonarQube Scanner tool
     }
 
     environment {
