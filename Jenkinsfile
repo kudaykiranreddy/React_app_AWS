@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs "NodeJS_18"  // Ensure this matches the tool name in Jenkins settings
-        sonarScanner "SonarQube Scanner"  // Correctly reference SonarQube Scanner tool
-    }
-
     environment {
         NETLIFY_AUTH_TOKEN = credentials('netlify_token')
         NETLIFY_SITE_ID = '0773b2bc-94cd-4bd1-941c-2aebdf8fa106'
