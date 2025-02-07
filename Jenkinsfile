@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs "NodeJS_18"  // Ensure this matches the tool name in Jenkins settings
+        sonarScanner "SonarQubeScanner"  // Reference the SonarQube Scanner tool by the name you provided
+    }
+
     environment {
         NETLIFY_AUTH_TOKEN = credentials('netlify_token')
         NETLIFY_SITE_ID = '0773b2bc-94cd-4bd1-941c-2aebdf8fa106'
@@ -60,7 +65,7 @@ pipeline {
                         echo "🧹 Cleaning old dependencies..."
                         cd React_app_AWS/To_do_app
                         rm -rf node_modules package-lock.json
-                        
+
                         echo "📦 Installing dependencies..."
                         npm install || { echo "❌ Failed to install dependencies"; exit 1; }
                     '''
@@ -87,6 +92,9 @@ pipeline {
                     echo "🔍 Running SonarQube analysis..."
                     sh '''
                         cd React_app_AWS/To_do_app
+                        which sonar-scanner || { echo "❌ SonarQube Scanner not found in PATH!"; exit 1; }
+                        sonar-scanner -v || { echo "❌ Unable to get SonarQube Scanner version!"; exit 1; }
+
                         sonar-scanner \
                           -Dsonar.projectKey=my-react-app \
                           -Dsonar.projectName="My React Application" \
@@ -94,62 +102,9 @@ pipeline {
                           -Dsonar.sources=src \
                           -Dsonar.tests=src/__tests__ \
                           -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
-                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov-report/index.html \
+                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
                           -Dsonar.host.url=http://localhost:9001 \
                           -Dsonar.login=$SONARQUBE_TOKEN || { echo "❌ SonarQube analysis failed"; exit 1; }
-                    '''
-                }
-            }
-        }
-
-        stage('Deploy to Netlify (Test)') {
-            steps {
-                script {
-                    echo "🚀 Deploying to Netlify (Test)..."
-                    sh '''
-                        cd React_app_AWS/To_do_app  # Ensure you're in the correct directory for deployment
-                        git checkout test
-                        git pull origin test
-                        
-                        # Install dependencies and build the project
-                        npm install
-                        npm run build  # This generates the dist directory (or build folder depending on configuration)
-
-                        # Install Netlify CLI
-                        npm install -g netlify-cli
-
-                        # Deploy to Netlify using the correct directory
-                        npx netlify deploy --auth $NETLIFY_AUTH_TOKEN --site $NETLIFY_SITE_ID --dir dist --message "Test deployment" || { echo "❌ Test deployment to Netlify failed"; exit 1; }
-
-                        echo "✅ Test deployment successful!"
-                    '''
-                }
-            }
-        }
-
-        stage('Create Pull Request for Production Merge') {
-            steps {
-                script {
-                    echo "📌 Creating pull request for merging test into prod..."
-                    sh '''
-                        cd React_app_AWS
-                        git checkout -b temp-merge-branch
-                        git config --global user.email "kudaykiranreddy143@gmail.com"
-                        git config --global user.name "kudaykiranreddy"
-                        git remote set-url origin https://$GITHUB_TOKEN@github.com/kudaykiranreddy/React_app_AWS.git
-                        git push origin temp-merge-branch
-
-                        PR_RESPONSE=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-                            -H "Accept: application/vnd.github.v3+json" \
-                            https://api.github.com/repos/kudaykiranreddy/React_app_AWS/pulls \
-                            -d '{
-                                "title": "Merge test into prod",
-                                "head": "temp-merge-branch",
-                                "base": "prod",
-                                "body": "Auto-generated pull request for merging test into prod."
-                            }')
-
-                        echo "✅ Pull request created. Please review and merge manually."
                     '''
                 }
             }
@@ -168,18 +123,10 @@ pipeline {
     }
 
     post {
-        always {
-            echo "Cleaning up..."
-            cleanWs()
-        }
-        success {
-            echo "🎉 ✅ Pull request created and deployment successful!"
-        }
         failure {
-            echo "❌ Pipeline failed!"
             mail to: 'ukalicheti@anergroup.com',
-                 subject: 'Pipeline Failed: Test Deployment',
-                 body: 'The pipeline for the test deployment has failed. Please check the logs for more details.',
+                 subject: 'Build Failed: React App Deployment',
+                 body: 'The Jenkins build has failed during one of the pipeline stages.',
                  from: 'kudaykiranreddy143@gmail.com',
                  replyTo: 'kudaykiranreddy143@gmail.com'
         }
