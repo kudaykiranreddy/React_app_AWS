@@ -13,6 +13,7 @@ pipeline {
         MAIN_BRANCH = "test"
         PROD_BRANCH = "prod"
         SONARQUBE_TOKEN = credentials('sonar_token_id')
+        SCANNER_HOME = tool 'SonarQubeScanner'  // Reference the SonarQube Scanner tool
     }
 
     stages {
@@ -86,9 +87,6 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            environment {
-                SCANNER_HOME = tool 'SonarQubeScanner'  // Ensure this matches the tool name in Jenkins settings
-            }
             steps {
                 script {
                     echo "🔍 Running SonarQube analysis..."
@@ -99,7 +97,6 @@ pipeline {
                           -Dsonar.projectName="My React Application" \
                           -Dsonar.projectVersion=1.0.0 \
                           -Dsonar.sources=src \
-                          -Dsonar.tests=src/__tests__ \
                           -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
                           -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
                           -Dsonar.host.url=http://localhost:9001 \
@@ -112,11 +109,11 @@ pipeline {
         stage('Deploy to Netlify (Test)') {
             steps {
                 script {
-                    echo "🚀 Deploying to Netlify (Test environment)..."
+                    echo "🚀 Deploying to Netlify test environment..."
                     sh '''
                         cd React_app_AWS/To_do_app
-                        npx netlify deploy --auth $NETLIFY_AUTH_TOKEN --site $NETLIFY_SITE_ID --dir=build --prod || { echo "❌ Deployment failed"; exit 1; }
-                        echo "✅ Deployment successful!"
+                        npx netlify deploy --dir=build --site=$NETLIFY_SITE_ID --auth=$NETLIFY_AUTH_TOKEN || { echo "❌ Deployment failed"; exit 1; }
+                        echo "✅ Deployment to Netlify test environment successful."
                     '''
                 }
             }
@@ -134,13 +131,12 @@ pipeline {
         }
     }
 
-
-
     post {
         failure {
+            echo '❌ Build failed! Sending failure notification...'
             mail to: 'ukalicheti@anergroup.com',
                  subject: 'Build Failed: React App Deployment',
-                 body: 'The Jenkins build has failed during one of the pipeline stages.',
+                 body: 'The Jenkins pipeline for the React application has failed. Please check the logs for more details.',
                  from: 'kudaykiranreddy143@gmail.com',
                  replyTo: 'kudaykiranreddy143@gmail.com'
         }
