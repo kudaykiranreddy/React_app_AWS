@@ -95,19 +95,26 @@ pipeline {
                     echo "🔍 Running SonarQube analysis..."
                     sh '''
                         cd React_app_AWS/To_do_app
+
+                        # Run tests with coverage
+                        npm install  # Ensure dependencies are installed
+                        npm run test -- --coverage || { echo "❌ Tests failed"; exit 1; }
+
+                        # Run SonarQube analysis
                         $SCANNER_HOME/bin/sonar-scanner \
-                          -Dsonar.projectKey=my-react-app \
-                          -Dsonar.projectName="My React Application" \
-                          -Dsonar.projectVersion=1.0.0 \
-                          -Dsonar.sources=src \
-                          -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
-                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
-                          -Dsonar.host.url=http://localhost:9001 \
-                          -Dsonar.login=$SONARQUBE_TOKEN || { echo "❌ SonarQube analysis failed"; exit 1; }
+                        -Dsonar.projectKey=my-react-app \
+                        -Dsonar.projectName="My React Application" \
+                        -Dsonar.projectVersion=1.0.0 \
+                        -Dsonar.sources=src \
+                        -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
+                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                        -Dsonar.host.url=http://localhost:9001 \
+                        -Dsonar.login=$SONARQUBE_TOKEN || { echo "❌ SonarQube analysis failed"; exit 1; }
                     '''
                 }
             }
         }
+
 
         stage('Deploy to Netlify (Test)') {
             steps {
