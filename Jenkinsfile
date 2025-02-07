@@ -12,6 +12,9 @@ pipeline {
         REPO_URL = "https://github.com/kudaykiranreddy/React_app_AWS.git"
         MAIN_BRANCH = "test"
         PROD_BRANCH = "prod"
+        SONARQUBE_TOKEN = credentials('sonar_token_id')
+        SCANNER_HOME = tool 'SonarQubeScanner'  // Reference the SonarQube Scanner tool
+
     }
 
     stages {
@@ -79,6 +82,28 @@ pipeline {
                         cd React_app_AWS/To_do_app
                         npm test || { echo "❌ Tests failed"; exit 1; }
                         echo "✅ All tests passed!"
+                    '''
+                }
+            }
+        }
+
+
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    echo "🔍 Running SonarQube analysis..."
+                    sh '''
+                        cd React_app_AWS/To_do_app
+                        $SCANNER_HOME/bin/sonar-scanner \
+                          -Dsonar.projectKey=my-react-app \
+                          -Dsonar.projectName="My React Application" \
+                          -Dsonar.projectVersion=1.0.0 \
+                          -Dsonar.sources=src \
+                          -Dsonar.exclusions=**/node_modules/**,**/*.test.js,**/*.spec.js \
+                          -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                          -Dsonar.host.url=http://localhost:9001 \
+                          -Dsonar.login=$SONARQUBE_TOKEN || { echo "❌ SonarQube analysis failed"; exit 1; }
                     '''
                 }
             }
