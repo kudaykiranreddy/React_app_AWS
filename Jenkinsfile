@@ -14,6 +14,7 @@ pipeline {
         PROD_BRANCH = "prod"
         SONARQUBE_TOKEN = credentials('sonar_token_id')
         SCANNER_HOME = tool 'SonarQubeScanner'  // Reference the SonarQube Scanner tool
+
     }
 
     stages {
@@ -86,6 +87,8 @@ pipeline {
             }
         }
 
+
+
         stage('SonarQube Analysis') {
             steps {
                 script {
@@ -109,11 +112,51 @@ pipeline {
         stage('Deploy to Netlify (Test)') {
             steps {
                 script {
-                    echo "🚀 Deploying to Netlify test environment..."
+                    echo "🚀 Deploying to Netlify (Test)..."
                     sh '''
-                        cd React_app_AWS/To_do_app
-                        npx netlify deploy --dir=build --site=$NETLIFY_SITE_ID --auth=$NETLIFY_AUTH_TOKEN || { echo "❌ Deployment failed"; exit 1; }
-                        echo "✅ Deployment to Netlify test environment successful."
+                        cd React_app_AWS/To_do_app  # Ensure you're in the correct directory for deployment
+                        git checkout test
+                        git pull origin test
+                        
+                        # Install dependencies and build the project
+                        npm install
+                        npm run build  # This generates the dist directory (or build folder depending on configuration)
+
+                        # Install Netlify CLI
+                        npm install -g netlify-cli
+
+                        # Deploy to Netlify using the correct directory
+                        npx netlify deploy --auth $NETLIFY_AUTH_TOKEN --site $NETLIFY_SITE_ID --dir dist --message "Test deployment" || { echo "❌ Test deployment to Netlify failed"; exit 1; }
+
+                        echo "✅ Test deployment successful!"
+                    '''
+                }
+            }
+        }
+
+        stage('Create Pull Request for Production Merge') {
+            steps {
+                script {
+                    echo "📌 Creating pull request for merging test into prod..."
+                    sh '''
+                        cd React_app_AWS
+                        git checkout -b temp-merge-branch
+                        git config --global user.email "kudaykiranreddy143@gmail.com"
+                        git config --global user.name "kudaykiranreddy"
+                        git remote set-url origin https://$GITHUB_TOKEN@github.com/kudaykiranreddy/React_app_AWS.git
+                        git push origin temp-merge-branch
+
+                        PR_RESPONSE=$(curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+                            -H "Accept: application/vnd.github.v3+json" \
+                            https://api.github.com/repos/kudaykiranreddy/React_app_AWS/pulls \
+                            -d '{
+                                "title": "Merge test into prod",
+                                "head": "temp-merge-branch",
+                                "base": "prod",
+                                "body": "Auto-generated pull request for merging test into prod."
+                            }')
+
+                        echo "✅ Pull request created. Please review and merge manually."
                     '''
                 }
             }
@@ -121,7 +164,7 @@ pipeline {
 
         stage('Send Email Notification') {
             steps {
-                echo "📧 Sending email notification for PR creation..."
+                echo "Sending email notification for PR creation..."
                 mail to: 'ukalicheti@anergroup.com',
                      subject: 'Pull Request Created: Test to Prod',
                      body: 'A pull request has been created to merge changes from the test branch to the prod branch.',
@@ -132,11 +175,18 @@ pipeline {
     }
 
     post {
+        always {
+            echo "Cleaning up..."
+            cleanWs()
+        }
+        success {
+            echo "🎉 ✅ Pull request created and deployment successful!"
+        }
         failure {
-            echo '❌ Build failed! Sending failure notification...'
+            echo "❌ Pipeline failed!"
             mail to: 'ukalicheti@anergroup.com',
-                 subject: 'Build Failed: React App Deployment',
-                 body: 'The Jenkins pipeline for the React application has failed. Please check the logs for more details.',
+                 subject: 'Pipeline Failed: Test Deployment',
+                 body: 'The pipeline for the test deployment has failed. Please check the logs for more details.',
                  from: 'kudaykiranreddy143@gmail.com',
                  replyTo: 'kudaykiranreddy143@gmail.com'
         }
