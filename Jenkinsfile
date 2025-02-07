@@ -3,7 +3,6 @@ pipeline {
 
     tools {
         nodejs "NodeJS_18"  // Ensure this matches the tool name in Jenkins settings
-        sonarScanner "SonarQubeScanner"  // Reference the SonarQube Scanner tool by the name you provided
     }
 
     environment {
@@ -65,7 +64,7 @@ pipeline {
                         echo "🧹 Cleaning old dependencies..."
                         cd React_app_AWS/To_do_app
                         rm -rf node_modules package-lock.json
-
+                        
                         echo "📦 Installing dependencies..."
                         npm install || { echo "❌ Failed to install dependencies"; exit 1; }
                     '''
@@ -87,15 +86,15 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
+            environment {
+                SCANNER_HOME = tool 'SonarQubeScanner'  // Ensure this matches the tool name in Jenkins settings
+            }
             steps {
                 script {
                     echo "🔍 Running SonarQube analysis..."
                     sh '''
                         cd React_app_AWS/To_do_app
-                        which sonar-scanner || { echo "❌ SonarQube Scanner not found in PATH!"; exit 1; }
-                        sonar-scanner -v || { echo "❌ Unable to get SonarQube Scanner version!"; exit 1; }
-
-                        sonar-scanner \
+                        $SCANNER_HOME/bin/sonar-scanner \
                           -Dsonar.projectKey=my-react-app \
                           -Dsonar.projectName="My React Application" \
                           -Dsonar.projectVersion=1.0.0 \
@@ -110,9 +109,22 @@ pipeline {
             }
         }
 
+        stage('Deploy to Netlify (Test)') {
+            steps {
+                script {
+                    echo "🚀 Deploying to Netlify (Test environment)..."
+                    sh '''
+                        cd React_app_AWS/To_do_app
+                        npx netlify deploy --auth $NETLIFY_AUTH_TOKEN --site $NETLIFY_SITE_ID --dir=build --prod || { echo "❌ Deployment failed"; exit 1; }
+                        echo "✅ Deployment successful!"
+                    '''
+                }
+            }
+        }
+
         stage('Send Email Notification') {
             steps {
-                echo "Sending email notification for PR creation..."
+                echo "📧 Sending email notification for PR creation..."
                 mail to: 'ukalicheti@anergroup.com',
                      subject: 'Pull Request Created: Test to Prod',
                      body: 'A pull request has been created to merge changes from the test branch to the prod branch.',
@@ -121,6 +133,8 @@ pipeline {
             }
         }
     }
+
+
 
     post {
         failure {
